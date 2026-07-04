@@ -67,10 +67,11 @@ const AUDIO_EXTENSION_MIME: Record<string, string> = {
 }
 
 // Map a Discord-reported audio content type to a MIME string Gemini accepts.
-// Discord labels MP3 as "audio/mpeg"; Gemini's inline-data MIME for MP3 is "audio/mp3".
+// Discord labels MP3 as "audio/mpeg" (or the legacy aliases "audio/mpeg3" /
+// "audio/x-mpeg-3"); Gemini's inline-data MIME for MP3 is "audio/mp3".
 function normalizeAudioMime(contentType: string): string {
   const base = contentType.split(';')[0]!.trim().toLowerCase()
-  if (base === 'audio/mpeg' || base === 'audio/mpg') return 'audio/mp3'
+  if (base === 'audio/mpeg' || base === 'audio/mpg' || base === 'audio/mpeg3' || base === 'audio/x-mpeg-3') return 'audio/mp3'
   return base
 }
 
