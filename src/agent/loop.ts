@@ -1497,6 +1497,7 @@ export class AgentLoop {
         pinnedConfigs,  // Reuse pre-fetched pinned configs (avoids second API call)
         maxImages: maxImagesFetch,  // Prevents loading all images from image-heavy channels
         maxAudio: maxAudioFetch,  // Only audio-capable bots fetch audio
+        oversizedAudioEmote: preConfig.oversized_audio_emote,
       })
       endProfile('fetchContext')
 

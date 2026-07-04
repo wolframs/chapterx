@@ -34,6 +34,16 @@ max_images: 5
 # (e.g. Gemini 3.5 Flash). Audio is sent inline (base64), so it is size-capped.
 # include_audio: true   # default: false
 # max_audio: 1          # max audio files per context (default: 1; 0 disables)
+# oversized_audio_emote: "🐘"  # reaction on messages whose audio exceeds the size cap ('' disables)
+#
+# Sizing: each audio file is capped at 12 MB raw (MAX_AUDIO_BYTES); base64 inflates
+# that to ~16 MB on the wire, just under the ~20 MB request ceiling of inline-audio
+# APIs (Gemini inlineData, OpenRouter input_audio). The cap is PER FILE and the
+# whole context ships in ONE request, so max_audio multiplies the payload:
+# keep max_audio: 1 while the per-file cap is in the 12-15 MB range. If you raise
+# max_audio, budget ~15 MB of raw audio TOTAL and divide by max_audio (e.g.
+# max_audio: 3 -> only feasible if files stay <= ~5 MB each; larger clips will
+# push the request over the provider ceiling and the LLM call will 400).
 
 # Tool configuration
 tools_enabled: true

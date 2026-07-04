@@ -342,6 +342,7 @@ export class ConfigSystem {
       // Loop prevention
       max_bot_reply_chain_depth: config.max_bot_reply_chain_depth ?? 2,
       bot_reply_chain_depth_emote: config.bot_reply_chain_depth_emote || '🔁',
+      oversized_audio_emote: config.oversized_audio_emote ?? '🐘',
 
       // Message filtering
       ignore_dotted_messages: config.ignore_dotted_messages !== false,  // Default: true

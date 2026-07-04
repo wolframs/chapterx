@@ -109,6 +109,7 @@ export interface FetchContextParams {
   pinnedConfigs?: string[]  // Optional: Pre-fetched pinned configs (skips fetchPinned call)
   maxImages?: number  // Optional: Cap image fetching to avoid RAM bloat (default: unlimited)
   maxAudio?: number  // Optional: Cap audio fetching (default: 0 — only audio-capable bots fetch audio)
+  oversizedAudioEmote?: string  // Optional: React to messages whose audio was skipped for size (falsy = no reaction)
   ignoreHistory?: boolean  // Optional: Skip .history command processing (raw fetch)
 }
 
@@ -118,6 +119,9 @@ export class DiscordConnector {
   private imageCache = new Map<string, CachedImage>()
   private audioCache = new Map<string, CachedAudio>()  // URL -> cached audio (in-memory, per session)
   private urlToFilename = new Map<string, string>()  // URL -> filename for disk cache lookup
+  // Messages already reacted-to for oversized audio (avoid re-reacting every
+  // activation — fetchContext rescans the rolling window). Bounded FIFO.
+  private oversizedAudioReacted = new Set<string>()
   private urlMapPath: string  // Path to URL map file
 
   // Push-based caches (populated from gateway events, avoids API fetches)
@@ -567,7 +571,7 @@ export class DiscordConnector {
    * Fetch context from Discord (messages, configs, images)
    */
   async fetchContext(params: FetchContextParams): Promise<DiscordContext> {
-    const { channelId, depth, targetMessageId, firstMessageId, authorized_roles, maxImages, maxAudio, ignoreHistory } = params
+    const { channelId, depth, targetMessageId, firstMessageId, authorized_roles, maxImages, maxAudio, oversizedAudioEmote, ignoreHistory } = params
 
     // Profiling helper
     const timings: Record<string, number> = {}
@@ -863,6 +867,17 @@ export class DiscordConnector {
             // buffer a huge upload into memory just to discard it.
             if (attachment.size && attachment.size > MAX_AUDIO_BYTES) {
               logger.warn({ size: attachment.size, url: attachment.url }, 'Skipping oversized audio attachment (pre-fetch)')
+              // Signal "file too large" on the message itself (same pattern as
+              // the 🚫 blocked-message reaction) — once per message, not per scan.
+              if (oversizedAudioEmote && !this.oversizedAudioReacted.has(msg.id)) {
+                this.oversizedAudioReacted.add(msg.id)
+                if (this.oversizedAudioReacted.size > 500) {
+                  const oldest = this.oversizedAudioReacted.values().next().value
+                  if (oldest !== undefined) this.oversizedAudioReacted.delete(oldest)
+                }
+                msg.react(oversizedAudioEmote).catch((error) =>
+                  logger.warn({ error, messageId: msg.id, emote: oversizedAudioEmote }, 'Failed to react to oversized audio message'))
+              }
               continue
             }
             // content_type is optional on Discord attachments — resolve the MIME
